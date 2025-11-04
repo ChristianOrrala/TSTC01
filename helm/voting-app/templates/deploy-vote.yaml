@@ -24,8 +24,42 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: vote
+  name: vote-int
 spec:
-  type: LoadBalancer
+  type: ClusterIP
   selector: { app: vote }
   ports: [{ name: http, port: 80, targetPort: 80 }]
+--
+---
+# ingress-vote.yaml
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: vote-ing
+  namespace: default
+  annotations:
+    kubernetes.io/ingress.class: alb
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/backend-protocol: HTTP
+    alb.ingress.kubernetes.io/healthcheck-path: /
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP":80}]'
+    alb.ingress.kubernetes.io/group.name: vote-group
+    # Sticky sessions help with Socket.IO polling fallback
+    alb.ingress.kubernetes.io/target-group-attributes: stickiness.enabled=true,stickiness.lb_cookie.duration_seconds=3600
+    # WebSocket keep-alive tuning
+    alb.ingress.kubernetes.io/load-balancer-attributes: idle_timeout.timeout_seconds=3600
+spec:
+  ingressClassName: alb
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                # use your existing internal Service (or the LB Service if you prefer)
+                name: vote-int
+                port:
+                  number: 80
+---

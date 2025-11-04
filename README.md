@@ -1,9 +1,21 @@
-
-
 # TSTC01 Example Voting App on AWS EKS using Terraform, Helm & GitHub Actions
 Technical Assessment for TeamStation.
 
 A production‑minded, minimal, and secure implementation of the classic **Example Voting App** on **Amazon EKS**, using **Terraform v1.6+**, **EKS module v21**, a **custom Helm umbrella chart** (apps + dependencies), and **GitHub Actions** with **OIDC** to assume AWS roles.
+
+---
+
+## Updates: Application Load Balancer (ALB) for WebSocket Support
+
+The `vote` and `result` services now use **AWS Application Load Balancer (ALB)** instead of classic ELB. This change was made to better support **WebSocket connections**, which are critical for real-time updates in the voting app.
+
+### Why ALB is Better for WebSockets
+
+1. **Native WebSocket Support**: ALB natively supports WebSocket and HTTP/2 protocols, ensuring seamless real-time communication between the client and backend services.
+2. **Idle Timeout Configuration**: ALB allows fine-grained control over idle timeout settings, which is essential for maintaining long-lived WebSocket connections. The timeout has been set to 3600 seconds for both services to prevent premature disconnections.
+3. **Sticky Sessions**: ALB supports sticky sessions via target group attributes, which helps maintain session affinity for WebSocket connections, especially when fallback mechanisms like polling are used.
+4. **Path-Based Routing**: ALB enables advanced routing capabilities, such as path-based or host-based routing, which can simplify future expansions (e.g., consolidating multiple services under a single ALB with different paths).
+5. **Enhanced Observability**: ALB provides detailed metrics and logs for monitoring WebSocket traffic, making it easier to debug and optimize performance.
 
 ---
 
