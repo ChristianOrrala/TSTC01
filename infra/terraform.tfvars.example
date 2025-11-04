@@ -1,0 +1,4 @@
+region             = "us-east-1"
+cluster_name       = "tstc01-voting-eks"
+github_org         = "ChristianOrrala"
+github_repo        = "TSTC01"

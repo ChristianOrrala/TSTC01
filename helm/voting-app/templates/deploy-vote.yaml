@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: vote
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "60"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "20"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "6"
+spec:
+  replicas: {{ .Values.vote.replicas }}
+  selector: { matchLabels: { app: vote } }
+  template:
+    metadata: { labels: { app: vote } }
+    spec:
+      containers:
+        - name: vote
+          image: "{{ .Values.imageRegistry }}/{{ .Values.vote.repository }}:{{ .Values.vote.tag }}"
+          ports: [{ containerPort: 80 }]
+          env:
+            - name: REDIS_HOST
+              value: "{{ .Release.Name }}-redis-master"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: vote
+spec:
+  type: LoadBalancer
+  selector: { app: vote }
+  ports: [{ name: http, port: 80, targetPort: 80 }]

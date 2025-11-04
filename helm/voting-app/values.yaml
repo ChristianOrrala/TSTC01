@@ -1,0 +1,53 @@
+imageRegistry: "<account>.dkr.ecr.<region>.amazonaws.com"
+
+vote:
+  repository: "voting-eks/vote"
+  tag: "latest"
+  replicas: 2
+
+result:
+  repository: "voting-eks/result"
+  tag: "latest"
+  replicas: 2
+
+worker:
+  repository: "voting-eks/worker"
+  tag: "latest"
+  replicas: 1
+
+redis:
+  architecture: standalone
+  auth:
+    enabled: false
+
+postgresql:
+  auth:
+    username: voting
+    password: voting
+    database: voting
+  architecture: standalone
+  primary:
+    startupProbe:
+      enabled: true
+      periodSeconds: 10
+      failureThreshold: 30
+      timeoutSeconds: 3
+    readinessProbe:
+      enabled: true
+      initialDelaySeconds: 20
+      periodSeconds: 10
+      timeoutSeconds: 3
+    livenessProbe:
+      enabled: true
+      initialDelaySeconds: 30
+      periodSeconds: 10
+      timeoutSeconds: 3
+    volumePermissions:
+      enabled: true
+    initdb:
+      scripts:
+        01-extensions.sql: |
+          CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
+  image:
+    registry: docker.io
+    repository: bitnami/postgresql

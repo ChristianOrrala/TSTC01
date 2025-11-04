@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: result
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "60"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "20"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
+    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "6"
+spec:
+  replicas: {{ .Values.result.replicas }}
+  selector: { matchLabels: { app: result } }
+  template:
+    metadata: { labels: { app: result } }
+    spec:
+      containers:
+        - name: result
+          image: "{{ .Values.imageRegistry }}/{{ .Values.result.repository }}:{{ .Values.result.tag }}"
+          ports: [{ containerPort: 80 }]
+          env:
+            - name: POSTGRES_HOST
+              value: "{{ .Release.Name }}-postgresql"
+            - name: POSTGRES_USER
+              value: "voting"
+            - name: POSTGRES_PASSWORD
+              value: "voting"
+            - name: POSTGRES_DB
+              value: "voting"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: result
+spec:
+  type: LoadBalancer
+  selector: { app: result }
+  ports: [{ name: http, port: 80, targetPort: 80 }]

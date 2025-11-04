@@ -1,0 +1,24 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector: { matchLabels: { app: worker } }
+  template:
+    metadata: { labels: { app: worker } }
+    spec:
+      containers:
+        - name: worker
+          image: "{{ .Values.imageRegistry }}/{{ .Values.worker.repository }}:{{ .Values.worker.tag }}"
+          env:
+            - name: REDIS_HOST
+              value: "{{ .Release.Name }}-redis-master"
+            - name: POSTGRES_HOST
+              value: "{{ .Release.Name }}-postgresql"
+            - name: POSTGRES_USER
+              value: "voting"
+            - name: POSTGRES_PASSWORD
+              value: "voting"
+            - name: POSTGRES_DB
+              value: "voting"

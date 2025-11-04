@@ -1,0 +1,81 @@
+name: build-and-deploy
+on:
+  push:
+    branches: ["main"]
+
+env:
+  AWS_REGION: us-east-1
+  CLUSTER_NAME: tstc01-voting-eks
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout infra repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC)
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push vote image
+        run: |
+          ECR="${{ steps.login-ecr.outputs.registry }}"
+          docker build -t $ECR/${{ env.CLUSTER_NAME }}/vote:${{ github.sha }} ./src/vote
+          docker push $ECR/${{ env.CLUSTER_NAME }}/vote:${{ github.sha }}
+
+      - name: Build & Push result image
+        run: |
+          ECR="${{ steps.login-ecr.outputs.registry }}"
+          docker build -t $ECR/${{ env.CLUSTER_NAME }}/result:${{ github.sha }} ./src/result
+          docker push $ECR/${{ env.CLUSTER_NAME }}/result:${{ github.sha }}
+
+      - name: Build & Push worker image
+        run: |
+          ECR="${{ steps.login-ecr.outputs.registry }}"
+          docker build -t $ECR/${{ env.CLUSTER_NAME }}/worker:${{ github.sha }} ./src/worker
+          docker push $ECR/${{ env.CLUSTER_NAME }}/worker:${{ github.sha }}
+
+  deploy-to-eks:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout infra repo
+        uses: actions/checkout@v4
+
+      - name: Configure AWS (OIDC) with EKS access
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Update kubeconfig
+        run: aws eks update-kubeconfig --name $CLUSTER_NAME --region $AWS_REGION
+
+      - name: Prepare Helm dependencies
+        run: |
+          helm repo add bitnami https://charts.bitnami.com/bitnami
+          helm dependency update helm/voting-app
+
+      - name: Helm deploy
+        run: |
+          REG="$(aws sts get-caller-identity --query 'Account' --output text).dkr.ecr.${AWS_REGION}.amazonaws.com"
+          helm upgrade --install voting-app helm/voting-app \
+            --set imageRegistry=$REG \
+            --set vote.repository="${CLUSTER_NAME}/vote" \
+            --set result.repository="${CLUSTER_NAME}/result" \
+            --set worker.repository="${CLUSTER_NAME}/worker" \
+            --set vote.tag=${{ github.sha }} \
+            --set result.tag=${{ github.sha }} \
+            --set worker.tag=${{ github.sha }} \
+            --namespace default
