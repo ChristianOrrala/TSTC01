@@ -284,35 +284,20 @@ Both workflows avoid storing AWS secrets, follow least privilege, and are idempo
 # Check pods are running
 kubectl get pods -w
 
-# Get external endpoints
-kubectl get svc vote result -o wide
+# Get their DNS names
+$voteAlb   = kubectl get ing vote-ing   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+$resultAlb = kubectl get ing result-ing -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+Write-Host "Vote ALB:   http://$voteAlb/"
+Write-Host "Result ALB: http://$resultAlb/"
 
-# Quick HTTP probe from your workstation (PowerShell)
+# Smoke tests
+Invoke-WebRequest "http://$voteAlb/"   -UseBasicParsing | Select-Object StatusCode
+Invoke-WebRequest "http://$resultAlb/" -UseBasicParsing | Select-Object StatusCode
 
-# Get ELB hostnames from Kubernetes
-$voteHost   = kubectl get svc vote   -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-$resultHost = kubectl get svc result -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
-
-# Build full URLs (add http://)
-$voteUrl   = "http://$voteHost/"
-$resultUrl = "http://$resultHost/"
-
-# Print them
-Write-Host "`nVote App URL:   $voteUrl"
-Write-Host "Result App URL: $resultUrl`n"
-
-# Open in default browser
-Start-Process $voteUrl
-Start-Process $resultUrl
-
-# Optional: quick HTTP probe
-Invoke-WebRequest $voteUrl   -UseBasicParsing | Select-Object StatusCode, Headers
-Invoke-WebRequest $resultUrl -UseBasicParsing | Select-Object StatusCode, Headers
+# Open in browser
+Start-Process "http://$voteAlb/"
+Start-Process "http://$resultAlb/"
 ```
-
-If you prefer a single entrypoint, switch to **ALB + Ingress** and configure path routing (`/vote`, `/result`) with TLS via **ACM**.
-
-I RECOMMEND using Microsoft Edge for best compatibility.
 ---
 
 ## Cleanup
