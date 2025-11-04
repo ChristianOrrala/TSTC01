@@ -2,11 +2,6 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: vote
-  annotations:
-    service.beta.kubernetes.io/aws-load-balancer-healthcheck-interval: "60"
-    service.beta.kubernetes.io/aws-load-balancer-healthcheck-timeout: "20"
-    service.beta.kubernetes.io/aws-load-balancer-healthcheck-healthy-threshold: "2"
-    service.beta.kubernetes.io/aws-load-balancer-healthcheck-unhealthy-threshold: "6"
 spec:
   replicas: {{ .Values.vote.replicas }}
   selector: { matchLabels: { app: vote } }
@@ -29,16 +24,13 @@ spec:
   type: ClusterIP
   selector: { app: vote }
   ports: [{ name: http, port: 80, targetPort: 80 }]
---
 ---
 # ingress-vote.yaml
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: vote-ing
-  namespace: default
   annotations:
-    kubernetes.io/ingress.class: alb
     alb.ingress.kubernetes.io/scheme: internet-facing
     alb.ingress.kubernetes.io/target-type: ip
     alb.ingress.kubernetes.io/backend-protocol: HTTP
