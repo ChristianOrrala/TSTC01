@@ -1,5 +1,4 @@
 # TSTC01 Example Voting App on AWS EKS using Terraform, Helm & GitHub Actions
-Technical Assessment for TeamStation.
 
 A production‑minded, minimal, and secure implementation of the classic **Example Voting App** on **Amazon EKS**, using **Terraform v1.6+**, **EKS module v21**, a **custom Helm umbrella chart** (apps + dependencies), and **GitHub Actions** with **OIDC** to assume AWS roles.
 
