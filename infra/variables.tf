@@ -51,8 +51,3 @@ variable "ecr_force_delete" {
   type    = bool
   default = true
 }
-
-# Data Sources
-data "aws_eks_cluster_auth" "this" {
-  name = module.eks.cluster_name
-}

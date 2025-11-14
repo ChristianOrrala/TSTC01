@@ -1,7 +1,8 @@
-data "http" "alb_controller_policy" {
-  url = "https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/v2.14.0/docs/install/iam_policy.json"
-}
+#############################################
+# AWS Load Balancer Controller (ALB) Configuration
+#############################################
 
+# IAM policy for ALB controller
 resource "aws_iam_policy" "alb_controller" {
   name   = "${var.cluster_name}-AWSLoadBalancerControllerIAMPolicy"
   policy = data.http.alb_controller_policy.response_body
@@ -29,15 +30,21 @@ data "aws_iam_policy_document" "alb_irsa_trust" {
   }
 }
 
+# IAM role for ALB controller with IRSA
 resource "aws_iam_role" "alb_irsa" {
   name               = "${var.cluster_name}-alb-controller"
   assume_role_policy = data.aws_iam_policy_document.alb_irsa_trust.json
 }
 
+# Attach ALB policy to IRSA role
 resource "aws_iam_role_policy_attachment" "alb_irsa_attach" {
   role       = aws_iam_role.alb_irsa.name
   policy_arn = aws_iam_policy.alb_controller.arn
 }
+
+#############################################
+# Helm Release for AWS Load Balancer Controller
+#############################################
 
 resource "helm_release" "aws_load_balancer_controller" {
   name             = "aws-load-balancer-controller"
@@ -80,6 +87,10 @@ resource "helm_release" "aws_load_balancer_controller" {
   ]
 }
 
+#############################################
+# Subnet Tags for ALB
+#############################################
+
 locals {
   elb_tags = {
     "kubernetes.io/role/elb"                    = "1"
@@ -99,9 +110,4 @@ resource "aws_ec2_tag" "subnet_cluster_tags" {
   resource_id = each.value
   key         = "kubernetes.io/cluster/${var.cluster_name}"
   value       = "shared"
-}
-
-#--- EKS connection data (from your created cluster)
-data "aws_eks_cluster" "this" {
-  name = module.eks.cluster_name
 }
